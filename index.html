@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Расписание занятий</title>
+  <style>
+    :root {
+      --bg: #0b0b10;
+      --card-bg: #13131b;
+      --accent: #b37aff;
+      --accent-soft: rgba(179,122,255,0.18);
+      --text-main: #f5f5f7;
+      --text-muted: #a0a0b3;
+      --border: #252538;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1b1b2b 0, #050509 55%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      color: var(--text-main);
+    }
+
+    .schedule-card {
+      background: radial-gradient(circle at top left, #1f172a 0, #111118 55%);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
+      padding: 20px 22px 16px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .card-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .card-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .card-small-date {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin-bottom: 2px;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .today-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .today-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .today-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .today-tagline span {
+      color: var(--accent);
+    }
+
+    .task-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .task-bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, #6c5ce7, #b37aff, #f78fb3);
+      box-shadow: 0 0 8px rgba(179,122,255,0.6);
+      flex-shrink: 0;
+    }
+
+    .task-main {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .task-time {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .task-text {
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    .card-footer {
+      margin-top: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card-footer span {
+      opacity: 0.9;
+    }
+
+    @media (max-width: 480px) {
+      .schedule-card {
+        border-radius: 14px;
+        padding: 18px 16px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="schedule-card">
+    <div class="card-header-line">
+      <div class="card-pill">weekly rhythm</div>
+      <div class="card-small-date" id="currentDateLabel"></div>
+    </div>
+
+    <div class="card-title">Расписание на сегодня</div>
+    <div class="card-subtitle">Автоматически подстраивается под день недели.</div>
+
+    <div class="today-row">
+      <div class="today-name" id="todayName">День</div>
+      <div class="today-tagline">
+        Сегодня: <span id="todaySummary">занятия загружаются…</span>
+      </div>
+    </div>
+
+    <ul class="task-list" id="taskList">
+      <!-- задачи подставятся скриптом -->
+    </ul>
+
+    <div class="card-footer">
+      <span id="nextDayHint"></span>
+      <span>Смена дня — по времени твоего устройства.</span>
+    </div>
+  </div>
+
+  <script>
+    // Расписание по дням недели
+    // JS: 0 — воскресенье, 1 — понедельник, ..., 6 — суббота
+    const schedule = {
+      1: {
+        name: "Понедельник",
+        summary: "Издательство",
+        items: [
+          { time: "весь день", text: "Работа в издательстве" }
+        ]
+      },
+      2: {
+        name: "Вторник",
+        summary: "Удалённая работа / статьи / практиканты",
+        items: [
+          { time: "весь день", text: "Удалённая работа: статьи, рукописи, правки" },
+          { time: "по договорённости", text: "Проверка практикантов и их отчётов" }
+        ]
+      },
+      3: {
+        name: "Среда",
+        summary: "Московская группа и ИТ-класс по ИИ",
+        items: [
+          { time: "16:00", text: "Московская группа по искусственному интеллекту" },
+          { time: "19:00", text: "ИТ-класс по искусственному интеллекту" }
+        ]
+      },
+      4: {
+        name: "Четверг",
+        summary: "Издательство",
+        items: [
+          { time: "весь день", text: "Работа в издательстве" }
+        ]
+      },
+      5: {
+        name: "Пятница",
+        summary: "Издательство",
+        items: [
+          { time: "весь день", text: "Работа в издательстве" }
+        ]
+      },
+      6: {
+        name: "Суббота",
+        summary: "Учебные блоки и ИИ-марафон",
+        items: [
+          { time: "10:40", text: "Проектная деятельность" },
+          { time: "12:40", text: "Исследовательская деятельность" },
+          { time: "14:30", text: "Московская группа по искусственному интеллекту" },
+          { time: "16:00", text: "Лекция/мастер-класс по ИИ для школ" },
+          { time: "18:00", text: "ИТ-класс по искусственному интеллекту" }
+        ]
+      },
+      0: {
+        name: "Воскресенье",
+        summary: "Консультации по ИИ",
+        items: [
+          { time: "15:00", text: "Консультации по искусственному интеллекту" }
+        ]
+      }
+    };
+
+    const dayNamesShort = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+    function formatDateRu(date) {
+      const d = String(date.getDate()).padStart(2, "0");
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const y = date.getFullYear();
+      const weekday = dayNamesShort[date.getDay()];
+      return `${d}.${m}.${y}, ${weekday}`;
+    }
+
+    function getNextDayName(todayIdx) {
+      const nextIdx = (todayIdx + 1) % 7;
+      return schedule[nextIdx]?.name || dayNamesShort[nextIdx];
+    }
+
+    function renderSchedule() {
+      const now = new Date();
+      const todayIdx = now.getDay();
+
+      const currentDateLabel = document.getElementById("currentDateLabel");
+      const todayNameEl = document.getElementById("todayName");
+      const todaySummaryEl = document.getElementById("todaySummary");
+      const taskListEl = document.getElementById("taskList");
+      const nextDayHintEl = document.getElementById("nextDayHint");
+
+      currentDateLabel.textContent = formatDateRu(now);
+
+      const todaySchedule = schedule[todayIdx];
+
+      if (!todaySchedule) {
+        todayNameEl.textContent = "Неизвестный день";
+        todaySummaryEl.textContent = "расписание не найдено";
+        taskListEl.innerHTML = "";
+        nextDayHintEl.textContent = "";
+        return;
+      }
+
+      todayNameEl.textContent = todaySchedule.name;
+      todaySummaryEl.textContent = todaySchedule.summary;
+
+      // Очищаем список задач и наполняем заново
+      taskListEl.innerHTML = "";
+      todaySchedule.items.forEach(item => {
+        const li = document.createElement("li");
+        li.className = "task-item";
+
+        const bullet = document.createElement("div");
+        bullet.className = "task-bullet";
+
+        const main = document.createElement("div");
+        main.className = "task-main";
+
+        const time = document.createElement("div");
+        time.className = "task-time";
+        time.textContent = item.time;
+
+        const text = document.createElement("div");
+        text.className = "task-text";
+        text.textContent = item.text;
+
+        main.appendChild(time);
+        main.appendChild(text);
+
+        li.appendChild(bullet);
+        li.appendChild(main);
+
+        taskListEl.appendChild(li);
+      });
+
+      const nextDayName = getNextDayName(todayIdx);
+      nextDayHintEl.textContent = `Завтра: ${nextDayName}.`;
+    }
+
+    renderSchedule();
+    // На случай долгого открытого окна — обновлять раз в час
+    setInterval(renderSchedule, 60 * 60 * 1000);
+  </script>
+</body>
+</html>
